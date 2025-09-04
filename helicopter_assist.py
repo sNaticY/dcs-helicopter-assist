@@ -56,8 +56,8 @@ class HelicopterAssist:
         YawRate = s.get("YawRate", 0.0)
 
         # RUDDER 控制
-        if self.rudder_enabled and not self.rudder_blocked:
-            rudder, balanced_rudder = self.rudder_helper.update(Yaw, YawRate) 
+        if self.rudder_enabled:
+            rudder, balanced_rudder = self.rudder_helper.update(Yaw, YawRate, blocked=self.rudder_blocked)
         else:
             rudder, balanced_rudder = None, None
 
@@ -94,7 +94,7 @@ class HelicopterAssist:
         if self.cyclic_x is not None and self.cyclic_y is not None:
             s += f"CyclicX={self.cyclic_x:+.2f} CyclicY={self.cyclic_y:+.2f} "
         if self.rudder is not None:
-            s += f"Rudder={self.rudder:+.2f} BalRudder={self.balanced_rudder:+.2f} "
+            s += f"Rudder={self.rudder:+.2f} BalRudder={self.balanced_rudder:+.2f} TargetYaw={self.rudder_helper.target_yaw:+.2f} "
         return s
     
     def neutral_all(self):
