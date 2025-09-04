@@ -1,6 +1,7 @@
 import pyvjoy
 import time
 import threading
+import random
 from utils import clamp, norm_to_vjoy
 
 
@@ -17,18 +18,11 @@ class JoystickController(threading.Thread):
         super().__init__(daemon=True)
         self.assist = assist
         self.deadzone = deadzone
-        self.j = pyvjoy.VJoyDevice(vjoy_id)
 
-    def write_vjoy(self, cx, cy, rud):
-        if cx is not None:
-            self.j.set_axis(pyvjoy.HID_USAGE_X,  norm_to_vjoy(cx))
-        if cy is not None:
-            self.j.set_axis(pyvjoy.HID_USAGE_Y,  norm_to_vjoy(-cy))
-        if rud is not None:
-            self.j.set_axis(pyvjoy.HID_USAGE_RZ, norm_to_vjoy(rud))
 
-    def neutral_all(self):
-        self.write_vjoy(0.0, 0.0, 0.0)
+
+    
+
 
     def run(self):
         if not get_gamepad:
@@ -38,7 +32,6 @@ class JoystickController(threading.Thread):
         SENS_CYCLIC = 0.01
         SENS_RUDDER = 0.3
 
-        self.neutral_all()
         while True:
             events = get_gamepad()
             ly = rx = 0.0
@@ -56,10 +49,10 @@ class JoystickController(threading.Thread):
             #     self.assist.yawRate_offset = clamp(self.assist.yawRate_offset, -1, 1)
 
             # 發送 vJoy 指令（自動控制優先，否則歸中）
-            cx = getattr(self.assist, "cyclic_x", 0.0)
-            cy = getattr(self.assist, "cyclic_y", 0.0)
-            rud = getattr(self.assist, "rudder", 0.0)
-            if self.assist.cyclic_enabled or self.assist.rudder_enabled:
-                self.write_vjoy(cx, cy, rud)
+            # cx = getattr(self.assist, "cyclic_x", 0.0)
+            # cy = getattr(self.assist, "cyclic_y", 0.0)
+            # rud = getattr(self.assist, "rudder", 0.0)
+            # if self.assist.cyclic_enabled or self.assist.rudder_enabled:
+            #     self.write_vjoy(cx, cy, rud)
 
             time.sleep(0.01)

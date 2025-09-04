@@ -36,7 +36,6 @@ class RudderHelper:
         self.prev_yaw_rate = 0.0
         self.balanced_rudder = 0.0
 
-        self.ema_yaw_rate = EMA(config.EMA_ALPHA)
         self.ema_yaw_rate_derivative = EMA(config.EMA_ALPHA)
 
     # -------------------------------
@@ -45,7 +44,6 @@ class RudderHelper:
     def update(self, yaw, yaw_rate, rudder_manual = 0):
 
         # yawRate 微分
-        #ema_yaw_rate = self.ema_yaw_rate.update(yaw_rate)
         yaw_rate_derivative = self.ema_yaw_rate_derivative.update((yaw_rate - self.prev_yaw_rate) / self.dt)
         self.prev_yaw_rate = yaw_rate
 

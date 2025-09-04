@@ -1,75 +1,99 @@
 import math
-from utils import world_to_body_velocity
+import config
+from utils import EMA, world_to_body_velocity
 
 
 class CyclicHelper:
-    def __init__(self,
-                 Kp_roll=0.18,
-                 Kd_rollrate=0.08,
-                 Kp_pitch=0.18,
-                 Kd_pitchrate=0.08,
-                 Kp_vx=0.04,
-                 Kd_ax=0.02,
-                 Kp_vy=0.03,
-                 Kd_ay=0.01,
-                 K_bias=0.05,
-                 max_auth=0.45,
-                 dt=0.04,
-                 bias_learn_rate=0.0002):
+    def __init__(self):
         # 参数
-        self.Kp_roll = Kp_roll
-        self.Kd_rollrate = Kd_rollrate
-        self.Kp_pitch = Kp_pitch
-        self.Kd_pitchrate = Kd_pitchrate
-        self.Kp_vx = Kp_vx
-        self.Kd_ax = Kd_ax
-        self.Kp_vy = Kp_vy
-        self.Kd_ay = Kd_ay
-        self.K_bias = K_bias
-        self.max_auth = max_auth
-        self.dt = dt
-        self.bias_learn_rate = bias_learn_rate
+        self.Kp_roll_base = 0.5
+        self.Kp_pitch_base = 0.5
+        self.Kp_v_base = 0.5
+        self.ki = 0.1
+        self.kd = 0.08
+        self.adaptive_factor = 0.003
+        self.dt = 0.02
+        self.max_auth = 0.35
+        self.integral_max = 5.0
+        self.integral_min = -5.0
+        self.learning_rate = 0.001
+        self.threshold = 0.15
 
         # 状态
-        self.u_x_bias = 0.0
-        self.u_y_bias = 0.0
-        self.prev_V_forward = 0.0
-        self.prev_V_right = 0.0
+        self.pitch_integral = 0.0
+        self.roll_integral = 0.0
+
+        self.prev_forward = 0.0
+        self.prev_right = 0.0
+        self.forward_integral = 0.0
+        self.right_integral = 0.0
+
+        self.cyclic_x_auto = 0.0
+        self.cyclic_y_auto = 0.0
+        self.right_auto = 0.0
+        self.forward_auto = 0.0
+        self.balanced_cyclic_x = 0.0
+        self.balanced_cyclic_y = 0.0
 
         # 最近一次 update 的中間量
-        self.V_forward = 0.0
-        self.V_right = 0.0
-        self.a_forward = 0.0
-        self.a_right = 0.0
+        self.forward = 0.0
+        self.right = 0.0
+        self.forward_acc = 0.0
+        self.right_acc = 0.0
+
+        self.ema_pitch_rate = EMA(config.EMA_ALPHA)
+        self.ema_roll_rate = EMA(config.EMA_ALPHA)
+        self.ema_forward_acc = EMA(config.EMA_ALPHA)
+        self.ema_right_acc = EMA(config.EMA_ALPHA)
 
     def update(self, Vx, Vy, Vz, Pitch, Roll, PitchRate, RollRate):
         # 坐标转换
-        self.V_forward, self.V_right, _ = world_to_body_velocity(Vx, Vy, Vz, Pitch, Roll, 0)
-        self.a_forward = (self.V_forward - self.prev_V_forward) / self.dt
-        self.a_right = (self.V_right - self.prev_V_right) / self.dt
-        self.prev_V_forward = self.V_forward
-        self.prev_V_right = self.V_right
+        self.forward, self.right, _ = world_to_body_velocity(Vx, Vy, Vz, Pitch, Roll, 0)
+        self.forward_acc = self.ema_forward_acc.update((self.forward - self.prev_forward) / self.dt)
+        self.right_acc = self.ema_right_acc.update((self.right - self.prev_right) / self.dt)
+        self.prev_forward = self.forward
+        self.prev_right = self.right
+        PitchRate = self.ema_pitch_rate.update(PitchRate)
+        RollRate = self.ema_roll_rate.update(RollRate)
+
+        # 自适应比例增益
+        KpRoll = self.Kp_roll_base + self.adaptive_factor * abs(Roll)
+        KpPitch = self.Kp_pitch_base + self.adaptive_factor * abs(Pitch)
+        KpForward = self.Kp_v_base + self.adaptive_factor * abs(self.forward)
+        KpRight = self.Kp_v_base + self.adaptive_factor * abs(self.right)
+
+        # 积分项
+        self.pitch_integral += Pitch * self.dt
+        self.pitch_integral = max(min(self.pitch_integral, self.integral_max), self.integral_min)
+        self.roll_integral += Roll * self.dt
+        self.roll_integral = max(min(self.roll_integral, self.integral_max), self.integral_min)
+        self.forward_integral += self.forward * self.dt
+        self.forward_integral = max(min(self.forward_integral, self.integral_max), self.integral_min)
+        self.right_integral += self.right * self.dt
+        self.right_integral = max(min(self.right_integral, self.integral_max), self.integral_min)
 
         # 横滚通道
-        u_x = -(self.Kp_roll * Roll + self.Kd_rollrate * RollRate) - 0.1 * (self.Kp_vx * self.V_right + self.Kd_ax * self.a_right)
-        if abs(self.V_right) <= 3 and abs(self.a_right) <= 0.5:
-            self.u_x_bias -= self.V_right * self.K_bias * self.bias_learn_rate
-        else:
-            self.u_x_bias = 0.0
-        u_x = max(min(u_x + self.u_x_bias, self.max_auth), -self.max_auth)
+        self.cyclic_x_auto = -1 * (KpRoll * Roll + self.ki * self.roll_integral - self.kd * RollRate)
+        self.cyclic_x_auto = max(min(self.cyclic_x_auto, self.max_auth), -self.max_auth)
+        #self.cyclic_y_auto += 0.05 * (KpRight * self.right + self.ki * self.right_integral - self.kd * self.right_acc)
+        #self.cyclic_y_auto = max(min(self.cyclic_y_auto, self.max_auth), -self.max_auth)
 
         # 俯仰通道
-        u_y = (self.Kp_pitch * (Pitch) - self.Kd_pitchrate * PitchRate)
-        if abs(self.V_forward) <= 10:
-            u_y -= 0.1 * (self.Kp_vy * self.V_forward + self.Kd_ay * self.a_forward)
-        if abs(self.V_forward) <= 8 and abs(self.a_forward) <= 0.5:
-            self.u_y_bias -= self.V_forward * self.K_bias * self.bias_learn_rate
-        else:
-            self.u_y_bias = 0.0
-        u_y = max(min(u_y + self.u_y_bias, self.max_auth), -self.max_auth)
+        self.cyclic_y_auto = 1 * (KpPitch * Pitch + self.ki * self.pitch_integral + self.kd * PitchRate)
+        self.cyclic_y_auto = max(min(self.cyclic_y_auto, self.max_auth), -self.max_auth)
+        #forward_auto += 0.05 * (KpForward * self.forward + self.ki * self.forward_integral - self.kd * self.forward_acc)
+        #forward_auto = max(min(forward_auto, self.max_auth), -self.max_auth)
 
-        return u_x, u_y
+
+        if abs(Roll) < self.threshold and abs(RollRate) < self.threshold:
+            delta = self.learning_rate * (self.cyclic_x_auto)
+            self.balanced_cyclic_x += delta
+
+        if abs(Pitch) < self.threshold and abs(PitchRate) < self.threshold:
+            delta = self.learning_rate * (self.cyclic_y_auto)
+            self.balanced_cyclic_y += delta
+
+        return 1 * (self.cyclic_x_auto + self.balanced_cyclic_x), 1 * (self.cyclic_y_auto + self.balanced_cyclic_y)
 
     def debug_print(self):
-        return f"Vf={self.V_forward:+.2f} Vr={self.V_right:+.2f} | Af={self.a_forward:+.2f} Ar={self.a_right:+.2f} | X_Bias={self.u_x_bias:+.2f} Y_Bias={self.u_y_bias:+.2f}"
-        
+        return f"Vf={self.forward:+.2f} Vr={self.right:+.2f} | Af={self.forward_acc:+.2f} Ar={self.right_acc:+.2f} | auto_cyclic_x={self.cyclic_x_auto:+.2f} auto_cyclic_y={self.cyclic_y_auto:+.2f} | balanced_cyclic_x={self.balanced_cyclic_x:+.2f} balanced_cyclic_y={self.balanced_cyclic_y:+.2f}"
