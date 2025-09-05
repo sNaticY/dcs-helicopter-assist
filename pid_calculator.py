@@ -4,7 +4,7 @@ from utils import EMA
 
 class PIDCalculator:
     def __init__(self,
-                 Kp_pre=0.5,
+                 Kp_pre=0.75,
                  Kp_base=0.5,
                  Ki=0.1,
                  Kd=0.08,
@@ -36,39 +36,49 @@ class PIDCalculator:
 
         self.ema_rate = EMA(config.EMA_ALPHA)
 
-    def update(self, error, rate, preError=0.0, blocked=False):
+    def update(self, error, rate, preError=0.0, manual=0.0):
+        if abs(manual) < 0.06:
         # 自适应比例增益
-        Kp = self.Kp_base + self.adaptive_factor * abs(error)
+            Kp = self.Kp_base + self.adaptive_factor * abs(error)
 
-        # 外环
-        PreErrorCmd = self.Kp_pre * preError
-        if abs(PreErrorCmd) > 0.01:
-            self.error_integral = 0.0
+            # 外环
+            PreErrorCmd = self.Kp_pre * preError
+            if abs(PreErrorCmd) > 0.01:
+                self.error_integral = 0.0
 
-        # 积分项
-        self.error_integral += error * self.dt
-        self.error_integral = max(min(self.error_integral, self.integral_max), self.integral_min)
+            # 积分项
+            self.error_integral += error * self.dt
+            self.error_integral = max(min(self.error_integral, self.integral_max), self.integral_min)
 
-        # 误差微分
-        if rate == None:
-            self.rate = self.ema_rate.update((error - self.prev_error) / self.dt)
-            self.prev_error = error
-        else:
-            self.rate = self.ema_rate.update(rate)
-            self.prev_error = error
+            # 误差微分
+            if rate == None:
+                self.rate = self.ema_rate.update((error - self.prev_error) / self.dt)
+                self.prev_error = error
+            else:
+                self.rate = self.ema_rate.update(rate)
+                self.prev_error = error
 
-        # PID 控制
-        self.auto = Kp * (PreErrorCmd + error) + self.Ki * self.error_integral + self.Kd * self.rate
-        self.auto = max(min(self.auto, self.max_auth), -self.max_auth)
+            # PID 控制
+            self.auto = PreErrorCmd + Kp * error + self.Ki * self.error_integral + self.Kd * self.rate
+            self.auto = max(min(self.auto, self.max_auth), -self.max_auth)
 
-        # 平衡点学习
-        if not blocked:
+            # 平衡点遗忘
+            self.balanced *= (1 - 0.3 * self.learning_rate)
+
+            # 平衡点学习
             self.balanced += 0.05 * self.learning_rate * self.auto
             if abs(error) < self.learning_threshold and abs(self.rate) < self.learning_threshold:
                 self.balanced += self.learning_rate * self.auto
             self.balanced = max(min(self.balanced, self.max_auth), -self.max_auth)
         else:
+            self.balanced += 0.05 * self.learning_rate * (manual - self.balanced)
+            if abs(error) < self.learning_threshold:
+                self.balanced += self.learning_rate * (manual - self.balanced)
+            self.balanced = max(min(self.balanced, self.max_auth), -self.max_auth)
             self.error_integral = 0.0
+            self.prev_error = error
+
+        
 
         return self.auto, self.balanced
 

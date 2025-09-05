@@ -6,7 +6,7 @@ from dcs_telemetry import DcsTelemetry
 from cyclic_helper import CyclicHelper
 from rudder_helper_old import RudderHelperOld
 from rudder_helper import RudderHelper
-from joystick_controller import JoystickController
+from joystick_monitor import JoystickMonitor
 import keyboard
 import time
 
@@ -41,6 +41,10 @@ class HelicopterAssist:
         self.previous_cyclic_y = 0.0
         self.previous_rudder = 0.0
 
+        self.manual_cyclic_x = 0.0
+        self.manual_cyclic_y = 0.0
+        self.manual_rudder = 0.0
+
         self.neutral_all()
 
     def compute_outputs(self, s):
@@ -57,7 +61,7 @@ class HelicopterAssist:
 
         # RUDDER 控制
         if self.rudder_enabled:
-            rudder, balanced_rudder = self.rudder_helper.update(Yaw, YawRate, blocked=self.rudder_blocked)
+            rudder, balanced_rudder = self.rudder_helper.update(Yaw, YawRate, self.rudder_blocked, self.manual_rudder)
         else:
             rudder, balanced_rudder = None, None
 
@@ -94,7 +98,9 @@ class HelicopterAssist:
         if self.cyclic_x is not None and self.cyclic_y is not None:
             s += f"CyclicX={self.cyclic_x:+.2f} CyclicY={self.cyclic_y:+.2f} "
         if self.rudder is not None:
-            s += f"Rudder={self.rudder:+.2f} BalRudder={self.balanced_rudder:+.2f} TargetYaw={self.rudder_helper.target_yaw:+.2f} "
+            s += f"Rudder={self.manual_rudder:+.2f} BalRudder={self.balanced_rudder:+.2f} "
+        if self.rudder_helper.target_yaw is not None:
+            s += f"TargetYaw={self.rudder_helper.target_yaw:+.2f} "
         return s
     
     def neutral_all(self):
@@ -122,7 +128,7 @@ def main():
     tel.start()
     time.sleep(0.02)
     assist = HelicopterAssist()
-    jm = JoystickController(assist)
+    jm = JoystickMonitor(assist)
     jm.start()
 
     def on_keyboard_event(e):
