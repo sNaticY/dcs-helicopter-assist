@@ -8,7 +8,7 @@ class PIDCalculator:
                  Kp_base=0.5,
                  Ki=0.1,
                  Kd=0.08,
-                 adaptive_factor=0.002,
+                 adaptive_factor=0.003,
                  max_auth=0.35,
                  integral_max=5.0,
                  integral_min=-5.0,

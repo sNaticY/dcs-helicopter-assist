@@ -15,8 +15,7 @@ class RudderHelper:
         self.rudder_auto = 0.0
         self.balanced_rudder = 0.0
 
-        self.yaw_rate_pid = PIDCalculator(adaptive_factor=self.adaptive_factor, 
-                                          max_auth=self.rudder_max, 
+        self.yaw_rate_pid = PIDCalculator(max_auth=self.rudder_max, 
                                           learning_threshold=self.yawRate_threshold)
         
         self.target_yaw = None

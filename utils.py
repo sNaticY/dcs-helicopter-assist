@@ -45,3 +45,7 @@ class EMA:
         else:
             self.y = self.alpha * x + (1 - self.alpha) * self.y
         return self.y
+    
+def apply_curve(x, expo=0.5):
+    # expo=0 為線性，expo>0 為指數（更細膩），expo<0 為反指數（更靈敏）
+    return x * (abs(x) ** expo)

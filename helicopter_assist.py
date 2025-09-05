@@ -1,7 +1,7 @@
 import random
 import pyvjoy
 from config import *
-from utils import EMA, norm_to_vjoy
+from utils import EMA, apply_curve, norm_to_vjoy
 from dcs_telemetry import DcsTelemetry
 from cyclic_helper import CyclicHelper
 from rudder_helper_old import RudderHelperOld
@@ -16,8 +16,11 @@ class HelicopterAssist:
     def __init__(self):
         self.j = pyvjoy.VJoyDevice(VJOY_DEVICE_ID)
 
+        self.cyclic_mode = 0
         self.cyclic_enabled = False
+        self.cyclic_hovering = False
         self.rudder_enabled = False
+
         self.cyclic_blocked = False
         self.rudder_blocked = False
 
@@ -66,9 +69,11 @@ class HelicopterAssist:
             rudder, balanced_rudder = None, None
 
         # CYCLIC 控制
-        if self.cyclic_enabled and not self.cyclic_blocked:
-            cyclic_x, cyclic_y = self.cyclic_helper.update(Vx, Vy, Vz, Pitch, Roll, PitchRate, RollRate)  
-        else: 
+        if self.cyclic_enabled:
+            manual_cyclic_x = apply_curve(self.manual_cyclic_x, expo=0.35)
+            manual_cyclic_y = apply_curve(self.manual_cyclic_y, expo=0.35)
+            cyclic_x, cyclic_y = self.cyclic_helper.update(Vx, Vy, Vz, Pitch, Roll, Yaw, PitchRate, RollRate, self.cyclic_blocked, manual_cyclic_x, manual_cyclic_y, self.cyclic_hovering)
+        else:
             cyclic_x, cyclic_y = (None, None)
 
         return cyclic_x, cyclic_y, rudder, balanced_rudder
@@ -150,8 +155,19 @@ def main():
     assist.loop(tel)
 
 def toggle_cyclic(assist):
-    assist.cyclic_enabled = not assist.cyclic_enabled
-    print(f"[INFO] Cyclic assist: {'ON' if assist.cyclic_enabled else 'OFF'}")
+    assist.cyclic_mode = (assist.cyclic_mode + 1) % 3
+    if assist.cyclic_mode == 0:
+        assist.cyclic_enabled = False
+        assist.cyclic_hovering = False
+        print("[INFO] Cyclic assist: OFF")
+    elif assist.cyclic_mode == 1:
+        assist.cyclic_enabled = True
+        assist.cyclic_hovering = False
+        print("[INFO] Cyclic assist: ON (manual/auto)")
+    elif assist.cyclic_mode == 2:
+        assist.cyclic_enabled = True
+        assist.cyclic_hovering = True
+        print("[INFO] Cyclic assist: HOVERING")
 
 def toggle_rudder(assist):
     assist.rudder_enabled = not assist.rudder_enabled
