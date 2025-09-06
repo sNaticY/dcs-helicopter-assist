@@ -8,6 +8,7 @@ from rudder_helper import RudderHelper
 from joystick_monitor import JoystickMonitor
 import keyboard
 import time
+import winsound
 
 
 
@@ -147,19 +148,31 @@ def toggle_cyclic(assist):
     if assist.cyclic_mode == 0:
         assist.cyclic_enabled = False
         assist.cyclic_hovering = False
+        play_beep("off")
         print("[INFO] Cyclic assist: OFF")
     elif assist.cyclic_mode == 1:
         assist.cyclic_enabled = True
         assist.cyclic_hovering = False
+        play_beep("on")
         print("[INFO] Cyclic assist: ON (manual/auto)")
     elif assist.cyclic_mode == 2:
         assist.cyclic_enabled = True
         assist.cyclic_hovering = True
+        play_beep("hover")
         print("[INFO] Cyclic assist: HOVERING")
 
 def toggle_rudder(assist):
     assist.rudder_enabled = not assist.rudder_enabled
+    play_beep("on" if assist.rudder_enabled else "off")
     print(f"[INFO] Rudder assist: {'ON' if assist.rudder_enabled else 'OFF'}")
+
+def play_beep(mode):
+    if mode == "on":
+        winsound.Beep(1200, 120)   # 高頻短音
+    elif mode == "hover":
+        winsound.Beep(900, 200)    # 中頻稍長
+    elif mode == "off":
+        winsound.Beep(500, 120)    # 低頻短音
 
 if __name__ == "__main__":
     main()
