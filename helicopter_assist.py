@@ -1,4 +1,5 @@
 import random
+from numpy import sign
 import pyvjoy
 from config import *
 from utils import EMA, apply_curve, norm_to_vjoy
@@ -38,6 +39,10 @@ class HelicopterAssist:
         self.manual_cyclic_x = 0.0
         self.manual_cyclic_y = 0.0
         self.manual_rudder = 0.0
+        self.smoothed_cyclic_x = 0.0
+        self.smoothed_cyclic_y = 0.0
+        self.max_cyclic_rate_up = 1.0   # 增加時最大變化量（每秒）
+        self.max_cyclic_rate_down = 2.0 # 減少時最大變化量（每秒）
 
         self.neutral_all()
 
@@ -61,8 +66,8 @@ class HelicopterAssist:
 
         # CYCLIC 控制
         if self.cyclic_enabled:
-            manual_cyclic_x = apply_curve(self.manual_cyclic_x, expo=0.35)
-            manual_cyclic_y = apply_curve(self.manual_cyclic_y, expo=0.35)
+            manual_cyclic_x = apply_curve(self.smoothed_cyclic_x, expo=0.5)
+            manual_cyclic_y = apply_curve(self.smoothed_cyclic_y, expo=0.5)
             cyclic_x, cyclic_y = self.cyclic_helper.update(Vx, Vy, Vz, Pitch, Roll, Yaw, PitchRate, RollRate, self.cyclic_blocked, manual_cyclic_x, manual_cyclic_y, self.cyclic_hovering)
         else:
             cyclic_x, cyclic_y = (None, None)
@@ -71,9 +76,48 @@ class HelicopterAssist:
 
     def loop(self, tel):
         last_debug = time.time()
+        last_time = time.time()
         while True:
+            now = time.time()
+            dt = now - last_time
+            last_time = now
+
+            # 平滑限制左搖桿變化率（增大慢，減少快）
+            def rate_limit(target, current, max_rate_up, max_rate_down, dt):
+                # 判斷是否跨過零點
+                if sign(target) != sign(current) and abs(current) > 0.001:
+                    # 先快速回到零
+                    delta = -current
+                    max_delta = max_rate_down * dt
+                    if abs(delta) > abs(max_delta):
+                        delta = sign(delta) * abs(max_delta)
+                    return current + delta
+                else:
+                    # 離開零用慢速，回歸零用快速
+                    moving_towards_zero = abs(target) < abs(current)
+                    if moving_towards_zero:
+                        max_delta = max_rate_down * dt
+                    else:
+                        max_delta = max_rate_up * dt
+                    delta = target - current
+                    if abs(delta) > abs(max_delta):
+                        delta = sign(delta) * abs(max_delta)
+                    return current + delta
+
+            self.smoothed_cyclic_x = rate_limit(
+                self.manual_cyclic_x, self.smoothed_cyclic_x,
+                self.max_cyclic_rate_up, self.max_cyclic_rate_down, dt
+            )
+            self.smoothed_cyclic_y = rate_limit(
+                self.manual_cyclic_y, self.smoothed_cyclic_y,
+                self.max_cyclic_rate_up, self.max_cyclic_rate_down, dt
+            )
+
             s = tel.latest
+
+            # 用平滑後的搖桿值作為手動輸入
             cx, cy, rud, b_rud = self.compute_outputs(s)
+
             self.cyclic_x = cx
             self.cyclic_y = cy
             self.rudder = rud
