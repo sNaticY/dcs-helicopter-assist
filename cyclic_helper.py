@@ -19,8 +19,8 @@ class CyclicHelper:
         # 最近一次 update 的中間量
         self.forward = 0.0
         self.right = 0.0
-        self.pitch_baseline = -0.085
-        self.roll_baseline = -0.045
+        self.pitch_baseline = -0.105
+        self.roll_baseline = -0.046
 
         self.cyclic_x_pid = PIDCalculator(max_auth=self.max_auth, learning_rate=self.learning_rate)
         self.cyclic_y_pid = PIDCalculator(max_auth=self.max_auth, learning_rate=self.learning_rate * 10)
@@ -92,7 +92,7 @@ class CyclicHelper:
     def reset(self):
         self.pitch_history.clear()
         self.target_pitch = 0.0
-        self.roll_baseline = -0.045
-        self.pitch_baseline = -0.085
+        self.roll_baseline = -0.046
+        self.pitch_baseline = -0.105
 
 
