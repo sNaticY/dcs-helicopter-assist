@@ -12,7 +12,7 @@ class PIDCalculator:
                  integral_max=5.0,
                  integral_min=-5.0,
                  learning_rate=0.005,
-                 learning_threshold=0.15):
+                 learning_threshold=0.015):
         # 参数
         self.Kp_pre = Kp_pre
         self.Kp_base = Kp_base
@@ -24,6 +24,7 @@ class PIDCalculator:
         self.integral_min = integral_min
         self.learning_rate = learning_rate
         self.learning_threshold = learning_threshold
+        self.forgetting_threshold = 0.02
         self.dt = 0.02
 
         # 状态
@@ -35,7 +36,7 @@ class PIDCalculator:
 
         self.ema_rate = EMA(config.EMA_ALPHA)
 
-    def update(self, error, rate, preError=0.0, manual=0.0):
+    def update(self, error, rate, preError=0.0, manual=0.0, forgetting_factor=0.3):
         if abs(manual) < 0.02:
         # 自适应比例增益
             Kp = self.Kp_base + self.adaptive_factor * abs(error)
@@ -62,7 +63,9 @@ class PIDCalculator:
             self.auto = max(min(self.auto, self.max_auth), -self.max_auth)
 
             # 平衡点遗忘
-            self.balanced *= (1 - 0.3 * self.learning_rate)
+            forgetAmount = forgetting_factor * self.learning_rate * self.balanced
+            forgetAmount = max(min(forgetAmount, self.forgetting_threshold), -self.forgetting_threshold)
+            self.balanced -= forgetAmount
 
             # 平衡点学习
             self.balanced += 0.05 * self.learning_rate * self.auto
@@ -70,9 +73,9 @@ class PIDCalculator:
                 self.balanced += self.learning_rate * self.auto
             self.balanced = max(min(self.balanced, self.max_auth), -self.max_auth)
         else:
-            self.balanced += 0.05 * self.learning_rate * (manual - self.balanced)
+            self.balanced += 0.05 * self.learning_rate * (manual)
             if abs(error) < self.learning_threshold:
-                self.balanced += self.learning_rate * (manual - self.balanced)
+                self.balanced += self.learning_rate * (manual)
             self.balanced = max(min(self.balanced, self.max_auth), -self.max_auth)
             self.error_integral = 0.0
             self.prev_error = error
