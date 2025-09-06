@@ -1,6 +1,5 @@
 import math
 import random
-
 import numpy as np
 
 
@@ -49,3 +48,7 @@ class EMA:
 def apply_curve(x, expo=0.5):
     # expo=0 為線性，expo>0 為指數（更細膩），expo<0 為反指數（更靈敏）
     return x * (abs(x) ** expo)
+
+def smooth_blend(val1, val2, speed, threshold=5.0):
+    alpha = max(min(speed / threshold, 1.0), 0.0)
+    return alpha * val1 + (1 - alpha) * val2

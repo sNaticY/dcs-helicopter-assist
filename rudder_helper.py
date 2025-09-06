@@ -1,7 +1,4 @@
 import math
-import time
-from utils import EMA
-import config
 from pid_calculator import PIDCalculator
 
 class RudderHelper:

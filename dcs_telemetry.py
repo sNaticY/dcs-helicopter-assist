@@ -1,9 +1,7 @@
 import json
-import math
 import time
 import socket
 import threading
-import numpy as np
 
 class DcsTelemetry(threading.Thread):
     """

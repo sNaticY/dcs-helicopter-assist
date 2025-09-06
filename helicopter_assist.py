@@ -4,7 +4,6 @@ from config import *
 from utils import EMA, apply_curve, norm_to_vjoy
 from dcs_telemetry import DcsTelemetry
 from cyclic_helper import CyclicHelper
-from rudder_helper_old import RudderHelperOld
 from rudder_helper import RudderHelper
 from joystick_monitor import JoystickMonitor
 import keyboard
@@ -25,15 +24,6 @@ class HelicopterAssist:
         self.rudder_blocked = False
 
         self.cyclic_helper = CyclicHelper()
-
-        # self.rudder_helper = RudderHelperOld(
-        #     Kp_rudder=Kp_rudder,
-        #     Kd_rudder=Kd_rudder,
-        #     K_bias=K_bias,
-        #     max_auth=MAX_RUDDER_AUTH,
-        #     dt=0.04
-        # )
-
         self.rudder_helper = RudderHelper()
 
         self.ema_vx = EMA(EMA_ALPHA)
@@ -55,9 +45,9 @@ class HelicopterAssist:
         Vy = self.ema_vy.update(s.get("Vy", 0.0))
         Vz = self.ema_vz.update(s.get("Vz", 0.0))
 
-        Pitch = s.get("Pitch", 0.0)  # 单位：度
-        Roll  = s.get("Roll", 0.0)   # 单位：度
-        Yaw   = s.get("Yaw", 0.0)    # 单位：度
+        Pitch = s.get("Pitch", 0.0)
+        Roll  = s.get("Roll", 0.0)
+        Yaw   = s.get("Yaw", 0.0)
         RollRate = s.get("RollRate", 0.0)
         PitchRate = s.get("PitchRate", 0.0)
         YawRate = s.get("YawRate", 0.0)
@@ -145,12 +135,10 @@ def main():
             assist.rudder_blocked = False
             assist.pitch_offset = 0.0
             assist.yawRate_offset = 0.0
-    keyboard.hook_key('left ctrl', on_keyboard_event, suppress=False)
-    keyboard.hook_key('left shift', on_keyboard_event, suppress=False)
 
-    # 加回 F9/F8 熱鍵
-    keyboard.add_hotkey('f9', lambda: toggle_cyclic(assist))
-    keyboard.add_hotkey('f8', lambda: toggle_rudder(assist))
+    keyboard.hook_key(TOGGLE_PAUSE_HOTKEY, on_keyboard_event, suppress=False)
+    keyboard.add_hotkey(TOGGLE_CYCLIC_HOTKEY, lambda: toggle_cyclic(assist))
+    keyboard.add_hotkey(TOGGLE_RUDDER_HOTKEY, lambda: toggle_rudder(assist))
 
     assist.loop(tel)
 

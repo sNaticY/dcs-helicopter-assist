@@ -1,4 +1,3 @@
-import math
 import config
 from utils import EMA
 

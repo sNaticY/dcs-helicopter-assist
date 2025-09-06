@@ -1,4 +1,3 @@
-import pyvjoy
 import time
 import threading
 import random
