@@ -170,7 +170,9 @@ def play_beep(mode):
     if mode == "on":
         winsound.Beep(1200, 120)   # 高頻短音
     elif mode == "hover":
-        winsound.Beep(900, 200)    # 中頻稍長
+        winsound.Beep(900, 120)    # 第一聲
+        time.sleep(0.08)           # 間隔
+        winsound.Beep(900, 120)    # 第二聲
     elif mode == "off":
         winsound.Beep(500, 120)    # 低頻短音
 

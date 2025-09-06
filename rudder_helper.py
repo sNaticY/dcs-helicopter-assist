@@ -9,13 +9,9 @@ class RudderHelper:
         self.rudder_max = 0.7
 
         # 状态
-        self.rudder_auto = 0.0
-        self.balanced_rudder = 0.0
-
+        self.target_yaw = None
         self.yaw_rate_pid = PIDCalculator(max_auth=self.rudder_max, 
                                           learning_threshold=self.yawRate_threshold)
-        
-        self.target_yaw = None
 
     # -------------------------------
     # 控制循环调用
@@ -33,7 +29,7 @@ class RudderHelper:
         elif pre_yaw_error < -math.pi:
             pre_yaw_error += 2 * math.pi
         
-        self.rudder_auto, self.balanced_rudder = self.yaw_rate_pid.update(
+        self.yaw_rate_pid.update(
             error = yaw_rate,
             rate = None,
             preError = pre_yaw_error,
@@ -44,6 +40,6 @@ class RudderHelper:
             return None, None
         
         if abs(rudder_manual) >= 0.02:
-            return rudder_manual + self.balanced_rudder, self.balanced_rudder
-        
-        return self.rudder_auto + self.balanced_rudder, self.balanced_rudder
+            return rudder_manual + self.yaw_rate_pid.balanced, self.yaw_rate_pid.balanced
+
+        return self.yaw_rate_pid.auto + self.yaw_rate_pid.balanced, self.yaw_rate_pid.balanced

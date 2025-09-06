@@ -52,5 +52,3 @@ class JoystickMonitor(threading.Thread):
                 self.assist.manual_cyclic_y = self.ly
             if not self.assist.rudder_blocked:
                 self.assist.manual_rudder = self.rx
-
-            time.sleep(0.00001)
