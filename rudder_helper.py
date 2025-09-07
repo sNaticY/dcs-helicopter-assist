@@ -46,3 +46,4 @@ class RudderHelper:
     
     def reset(self):
         self.target_yaw = None
+        self.yaw_rate_pid.reset()

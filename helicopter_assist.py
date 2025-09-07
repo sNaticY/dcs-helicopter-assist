@@ -47,9 +47,9 @@ class HelicopterAssist:
         self.neutral_all()
 
     def compute_outputs(self, s):
-        Vx = self.ema_vx.update(s.get("Vx", 0.0))
-        Vy = self.ema_vy.update(s.get("Vy", 0.0))
-        Vz = self.ema_vz.update(s.get("Vz", 0.0))
+        Vx = s.get("Vx", 0.0)
+        Vy = s.get("Vy", 0.0)
+        Vz = s.get("Vz", 0.0)
 
         Pitch = s.get("Pitch", 0.0)
         Roll  = s.get("Roll", 0.0)
@@ -62,7 +62,7 @@ class HelicopterAssist:
         if self.rudder_enabled:
             rudder, balanced_rudder = self.rudder_helper.update(Yaw, YawRate, self.rudder_blocked, self.manual_rudder)
         else:
-            rudder, balanced_rudder = None, None
+            rudder, balanced_rudder = self.manual_rudder, None
 
         # CYCLIC 控制
         if self.cyclic_enabled:
@@ -70,7 +70,7 @@ class HelicopterAssist:
             manual_cyclic_y = apply_curve(self.smoothed_cyclic_y, expo=0.5)
             cyclic_x, cyclic_y = self.cyclic_helper.update(Vx, Vy, Vz, Pitch, Roll, Yaw, PitchRate, RollRate, self.cyclic_blocked, manual_cyclic_x, manual_cyclic_y, self.cyclic_hovering)
         else:
-            cyclic_x, cyclic_y = (None, None)
+            cyclic_x, cyclic_y = (apply_curve(self.manual_cyclic_x), apply_curve(self.manual_cyclic_y))
 
         return cyclic_x, cyclic_y, rudder, balanced_rudder
 
@@ -123,7 +123,7 @@ class HelicopterAssist:
             self.rudder = rud
             self.balanced_rudder = b_rud
 
-            if self.cyclic_enabled or self.rudder_enabled:
+            if not self.cyclic_blocked and not self.rudder_blocked:
                 self.write_vjoy(cx, cy, rud)
 
             now = time.time()
@@ -137,7 +137,7 @@ class HelicopterAssist:
         s = ""
         if self.cyclic_x is not None and self.cyclic_y is not None:
             s += f"CyclicX={self.cyclic_x:+.2f} CyclicY={self.cyclic_y:+.2f} "
-        if self.rudder is not None:
+        if self.rudder is not None and self.balanced_rudder is not None:
             s += f"Rudder={self.manual_rudder:+.2f} BalRudder={self.balanced_rudder:+.2f} "
         if self.rudder_helper.target_yaw is not None:
             s += f"TargetYaw={self.rudder_helper.target_yaw:+.2f} "
@@ -178,8 +178,8 @@ def main():
         elif e.event_type == "up":
             assist.cyclic_blocked = False
             assist.rudder_blocked = False
-            assist.pitch_offset = 0.0
-            assist.yawRate_offset = 0.0
+            assist.rudder_helper.reset()
+            assist.cyclic_helper.reset()
 
     keyboard.hook_key(TOGGLE_PAUSE_HOTKEY, on_keyboard_event, suppress=False)
     keyboard.add_hotkey(TOGGLE_CYCLIC_HOTKEY, lambda: toggle_cyclic(assist))
@@ -192,6 +192,7 @@ def toggle_cyclic(assist):
     if assist.cyclic_mode == 0:
         assist.cyclic_enabled = False
         assist.cyclic_hovering = False
+        assist.cyclic_helper.reset()
         play_beep("off")
         print("[INFO] Cyclic assist: OFF")
     elif assist.cyclic_mode == 1:
@@ -207,6 +208,7 @@ def toggle_cyclic(assist):
 
 def toggle_rudder(assist):
     assist.rudder_enabled = not assist.rudder_enabled
+    assist.rudder_helper.reset()
     play_beep("on" if assist.rudder_enabled else "off")
     print(f"[INFO] Rudder assist: {'ON' if assist.rudder_enabled else 'OFF'}")
 

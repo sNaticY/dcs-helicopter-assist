@@ -12,8 +12,6 @@ class CyclicHelper:
         self.learning_rate = 0.001
 
         # 状态
-        self.prev_forward = 0.0
-        self.prev_right = 0.0
         self.prev_up = 0.0
 
         # 最近一次 update 的中間量
@@ -35,6 +33,7 @@ class CyclicHelper:
         # 计算当前速度和加速度
         self.forward, self.right, _ = world_to_body_velocity(Vx, Vy, Vz, Pitch, Roll, Yaw)
         acc_up = self.ema_acc_up.update((Vz - self.prev_up) / self.dt)
+        self.prev_up = Vz
         
         pre_error_x = 0.0
         pre_error_y = 0.0
@@ -46,12 +45,6 @@ class CyclicHelper:
         if hovering and abs(RollRate) < 0.01 and abs(Roll -self.roll_baseline) < 0.02:
             self.roll_baseline -= 0.0002 * self.right
 
-        if hovering:
-            pre_error_x = min(max(-0.05*(self.right) + self.roll_baseline, -0.2), 0.2)
-            pre_error_y = min(max(-0.05*(self.forward) + self.pitch_baseline, -0.15), 0.15)
-        elif abs(manual_cyclic_y) < 0.05:
-            pre_error_acc_up = 0.0001 * acc_up * min(max(Pitch, -1), 1)
-
         # 記錄 pitch 歷史
         if not hovering and abs(manual_cyclic_y) > 0.02 and not hovering and abs(manual_cyclic_x) < 0.05:
             self.pitch_history.append(Pitch)
@@ -59,6 +52,14 @@ class CyclicHelper:
                 self.pitch_history.pop(0)
 
         target_pitch = self.get_pitch_avg() if not hovering else 0.0
+
+        if hovering:
+            pre_error_x = min(max(-0.05*(self.right) + self.roll_baseline, -0.2), 0.2)
+            pre_error_y = min(max(-0.05*(self.forward) + self.pitch_baseline, -0.15), 0.15)
+        elif abs(manual_cyclic_y) < 0.05:
+            pre_error_acc_up = 0 #sign(Pitch) * 2 * acc_up * min(max(Pitch - target_pitch, -0.2), 0.2)
+
+       
 
         self.cyclic_x_pid.update(-Roll + 1 * pre_error_x, -RollRate, manual=manual_cyclic_x)
         self.cyclic_y_pid.update(Pitch - target_pitch + 1 * pre_error_y, PitchRate, preError=pre_error_acc_up, manual=manual_cyclic_y, forgetting_factor=0.0)
@@ -94,5 +95,10 @@ class CyclicHelper:
         self.target_pitch = 0.0
         self.roll_baseline = -0.046
         self.pitch_baseline = -0.105
-
-
+        self.cyclic_x_pid.reset()
+        self.cyclic_y_pid.reset()
+        self.prev_up = 0.0
+        self.forward = 0.0
+        self.right = 0.0
+        self.up = 0.0
+        self.ema_acc_up = EMA(config.EMA_ALPHA)

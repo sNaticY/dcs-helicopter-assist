@@ -80,4 +80,12 @@ class PIDCalculator:
             self.error_integral = 0.0
             self.prev_error = error
 
+    def reset(self):
+        self.auto = 0.0
+        self.balanced = 0.0
+        self.error_integral = 0.0
+        self.prev_error = 0.0
+        self.rate = 0.0
+        self.ema_rate = EMA(config.EMA_ALPHA)
+
 
