@@ -41,6 +41,7 @@ class HelicopterAssist:
         self.manual_rudder = 0.0
         self.smoothed_cyclic_x = 0.0
         self.smoothed_cyclic_y = 0.0
+        self.smoothed_rudder = 0.0
         self.max_cyclic_rate_up = 1.0   # 增加時最大變化量（每秒）
         self.max_cyclic_rate_down = 2.0 # 減少時最大變化量（每秒）
 
@@ -60,7 +61,8 @@ class HelicopterAssist:
 
         # RUDDER 控制
         if self.rudder_enabled:
-            rudder, balanced_rudder = self.rudder_helper.update(Yaw, YawRate, self.rudder_blocked, self.manual_rudder)
+            manual_rudder = apply_curve(self.smoothed_rudder, expo=0.5)
+            rudder, balanced_rudder = self.rudder_helper.update(Yaw, YawRate, self.rudder_blocked, manual_rudder)
         else:
             rudder, balanced_rudder = self.manual_rudder, None
 
@@ -110,6 +112,10 @@ class HelicopterAssist:
             )
             self.smoothed_cyclic_y = rate_limit(
                 self.manual_cyclic_y, self.smoothed_cyclic_y,
+                self.max_cyclic_rate_up, self.max_cyclic_rate_down, dt
+            )
+            self.smoothed_rudder = rate_limit(
+                self.manual_rudder, self.smoothed_rudder,
                 self.max_cyclic_rate_up, self.max_cyclic_rate_down, dt
             )
 

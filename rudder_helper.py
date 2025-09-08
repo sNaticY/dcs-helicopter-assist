@@ -17,7 +17,7 @@ class RudderHelper:
     # 控制循环调用
     # -------------------------------
     def update(self, yaw, yaw_rate, blocked, rudder_manual = 0.0):
-        if abs(rudder_manual) < 0.1 and abs(yaw_rate) < 0.3 and not blocked:
+        if abs(rudder_manual) < 0.02 and not blocked:
             if self.target_yaw == None:
                 self.target_yaw = yaw
         else:
