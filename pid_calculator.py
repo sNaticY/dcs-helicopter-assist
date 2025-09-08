@@ -9,8 +9,8 @@ class PIDCalculator:
                  Kd=0.08,
                  adaptive_factor=0.003,
                  max_auth=0.35,
-                 integral_max=5.0,
-                 integral_min=-5.0,
+                 integral_max=1.0,
+                 integral_min=-1.0,
                  learning_rate=0.005,
                  learning_threshold=0.015):
         # 参数
@@ -46,10 +46,6 @@ class PIDCalculator:
             if abs(PreErrorCmd) > 0.01:
                 self.error_integral = 0.0
 
-            # 积分项
-            self.error_integral += error * self.dt
-            self.error_integral = max(min(self.error_integral, self.integral_max), self.integral_min)
-
             # 误差微分
             if rate == None:
                 self.rate = self.ema_rate.update((error - self.prev_error) / self.dt)
@@ -58,6 +54,14 @@ class PIDCalculator:
                 self.rate = self.ema_rate.update(rate)
                 self.prev_error = error
 
+
+            # 积分泄漏
+            self.error_integral -= 0.1 * max(abs(self.rate), 0.1) * self.error_integral
+
+            # 积分项
+            self.error_integral += error * self.dt
+            self.error_integral = max(min(self.error_integral, self.integral_max), self.integral_min)
+            
             # PID 控制
             self.auto = PreErrorCmd + Kp * error + self.Ki * self.error_integral + self.Kd * self.rate
             self.auto = max(min(self.auto, self.max_auth), -self.max_auth)
@@ -73,9 +77,9 @@ class PIDCalculator:
                 self.balanced += self.learning_rate * self.auto
             self.balanced = max(min(self.balanced, self.max_auth), -self.max_auth)
         else:
-            self.balanced += 0.05 * self.learning_rate * (manual)
+            self.balanced += 0.05 * self.learning_rate * (self.auto + manual)
             if abs(error) < self.learning_threshold:
-                self.balanced += self.learning_rate * (manual)
+                self.balanced += 2 * self.learning_rate * (self.auto + manual)
             self.balanced = max(min(self.balanced, self.max_auth), -self.max_auth)
             self.error_integral = 0.0
             self.prev_error = error

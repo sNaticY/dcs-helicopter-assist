@@ -40,7 +40,7 @@ class RudderHelper:
             return None, None
         
         if abs(rudder_manual) >= 0.02:
-            return rudder_manual + self.yaw_rate_pid.balanced, self.yaw_rate_pid.balanced
+            return rudder_manual + self.yaw_rate_pid.balanced + self.yaw_rate_pid.auto, self.yaw_rate_pid.balanced
 
         return self.yaw_rate_pid.auto + self.yaw_rate_pid.balanced, self.yaw_rate_pid.balanced
     

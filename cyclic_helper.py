@@ -74,11 +74,10 @@ class CyclicHelper:
         x_result = self.cyclic_x_pid.auto + self.cyclic_x_pid.balanced
         y_result = self.cyclic_y_pid.auto + self.cyclic_y_pid.balanced
 
-        if abs(manual_cyclic_x) > 0.02:
-            x_result = manual_cyclic_x + self.cyclic_x_pid.balanced
-        if abs(manual_cyclic_y) > 0.02:
-            y_result = manual_cyclic_y + self.cyclic_y_pid.balanced
-
+        if abs(manual_cyclic_x) > 0.01:
+            x_result += manual_cyclic_x
+        if abs(manual_cyclic_y) > 0.01:
+            y_result += manual_cyclic_y
         return x_result, y_result
 
     def debug_print(self):
