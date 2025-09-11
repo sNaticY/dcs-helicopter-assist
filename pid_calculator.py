@@ -36,7 +36,7 @@ class PIDCalculator:
 
         self.ema_rate = EMA(config.EMA_ALPHA)
 
-    def update(self, error, rate, preError=0.0, manual=0.0, forgetting_factor=0.3):
+    def update(self, error, rate, preError=0.0, manual=0.0, forgetting_factor=0.1):
         if abs(manual) < 0.02:
         # 自适应比例增益
             Kp = self.Kp_base + self.adaptive_factor * abs(error)
@@ -56,7 +56,7 @@ class PIDCalculator:
 
 
             # 积分泄漏
-            self.error_integral -= 0.1 * max(abs(self.rate), 0.1) * self.error_integral
+            self.error_integral -= 0.01 * max(abs(self.rate), 0.1) * self.error_integral
 
             # 积分项
             self.error_integral += error * self.dt
@@ -79,7 +79,7 @@ class PIDCalculator:
         else:
             self.balanced += 0.05 * self.learning_rate * (self.auto + manual)
             if abs(error) < self.learning_threshold:
-                self.balanced += 2 * self.learning_rate * (self.auto + manual)
+                self.balanced += self.learning_rate * (self.auto + manual)
             self.balanced = max(min(self.balanced, self.max_auth), -self.max_auth)
             self.error_integral = 0.0
             self.prev_error = error
