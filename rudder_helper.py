@@ -23,7 +23,7 @@ class RudderHelper:
     # -------------------------------
     # 控制循环调用
     # -------------------------------
-    def update(self, yaw, yaw_rate, blocked, rudder_manual=0.0):
+    def update(self, motion_state, blocked, rudder_manual=0.0):
         manual_active = abs(rudder_manual) >= 0.02
 
         if blocked:
@@ -34,16 +34,16 @@ class RudderHelper:
 
         # 手动 -> 自动 切换瞬间，锁定当前航向，避免回弹
         if (not manual_active) and self.prev_manual_active:
-            self.manual_yaw_rate = yaw_rate
+            self.manual_yaw_rate = motion_state.yaw_rate
             self.yaw_rate_pid.manual_override_integral(
-                error=yaw_rate,
+                error=motion_state.yaw_rate,
                 rate=None,
                 delta_time=self.dt,
                 manual_input=rudder_manual + self.yaw_rate_pid.auto,
             )
 
-        if not manual_active and (abs(yaw_rate) < 0.05 or self.prev_manual_rudder * yaw_rate > 0) and self.target_yaw is None:
-            self.target_yaw = yaw
+        if not manual_active and (abs(motion_state.yaw_rate) < 0.05 or self.prev_manual_rudder * motion_state.yaw_rate > 0) and self.target_yaw is None:
+            self.target_yaw = motion_state.yaw
             # 重置外环，清掉历史积分/导数，避免旧命令残留
             self.yaw_pid.reset()
             # self.yaw_rate_pid.reset()
@@ -56,7 +56,7 @@ class RudderHelper:
             self.target_yaw = None
 
         if self.target_yaw is not None:
-            yaw_error = self.target_yaw - yaw
+            yaw_error = self.target_yaw - motion_state.yaw
             if yaw_error > math.pi:
                 yaw_error -= 2 * math.pi
             elif yaw_error < -math.pi:
@@ -80,7 +80,7 @@ class RudderHelper:
 
             # 内环
             self.yaw_rate_pid.update(
-                error=(yaw_rate + yaw_cmd), rate=None, delta_time=self.dt
+                error=(motion_state.yaw_rate + yaw_cmd), rate=None, delta_time=self.dt
             )
 
         raw_inner = self.yaw_rate_pid.auto

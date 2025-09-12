@@ -86,9 +86,7 @@ class HelicopterAssist:
 
         # RUDDER 控制（使用处理后的手动输入）
         if self.rudder_enabled:
-            rudder = self.rudder_helper.update(
-                yaw, yaw_rate, self.rudder_blocked, self.inputs.input_rudder
-            )
+            rudder = self.rudder_helper.update(self.motion_state, self.rudder_blocked, self.inputs.input_rudder)
         else:
             rudder = self.inputs.input_rudder
 
