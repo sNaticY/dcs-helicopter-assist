@@ -35,7 +35,7 @@ class RudderHelper:
         # 手动 -> 自动 切换瞬间，锁定当前航向，避免回弹
         if (not manual_active) and self.prev_manual_active:
             self.manual_yaw_rate = yaw_rate
-            self.yaw_rate_pid.manual_override(
+            self.yaw_rate_pid.manual_override_integral(
                 error=yaw_rate,
                 rate=None,
                 delta_time=self.dt,
@@ -44,7 +44,7 @@ class RudderHelper:
 
         if not manual_active and (abs(yaw_rate) < 0.05 or self.prev_manual_rudder * yaw_rate > 0) and self.target_yaw is None:
             self.target_yaw = yaw
-            # 重置内外环，清掉历史积分/导数，避免旧命令残留
+            # 重置外环，清掉历史积分/导数，避免旧命令残留
             self.yaw_pid.reset()
             # self.yaw_rate_pid.reset()
             # 强制外环本帧立刻更新一次

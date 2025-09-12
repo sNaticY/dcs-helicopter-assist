@@ -52,10 +52,7 @@ class PIDCalculatorNew:
         self.auto = Kp * error + self.Ki * self.error_integral + self.Kd * self.rate
         self.auto = max(min(self.auto, self.max_auth), -self.max_auth)
 
-    def get_integral(self):
-        return self.error_integral * self.Ki
-
-    def manual_override(self, error, rate, delta_time, manual_input):
+    def manual_override_integral(self, error, rate, delta_time, manual_input):
         # 自适应比例增益
         Kp = self.Kp_base + self.adaptive_factor * abs(error)
 
