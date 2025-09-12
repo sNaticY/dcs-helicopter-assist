@@ -52,3 +52,6 @@ def apply_curve(x, expo=0.5):
 def smooth_blend(val1, val2, speed, threshold=5.0):
     alpha = max(min(speed / threshold, 1.0), 0.0)
     return alpha * val1 + (1 - alpha) * val2
+
+def sign(x):
+    return 1 if x > 0 else -1 if x < 0 else 0

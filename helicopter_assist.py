@@ -86,11 +86,11 @@ class HelicopterAssist:
 
         # RUDDER 控制（使用处理后的手动输入）
         if self.rudder_enabled:
-            rudder, balanced_rudder = self.rudder_helper.update(
+            rudder = self.rudder_helper.update(
                 yaw, yaw_rate, self.rudder_blocked, self.inputs.input_rudder
             )
         else:
-            rudder, balanced_rudder = self.inputs.input_rudder, None
+            rudder = self.inputs.input_rudder
 
         # CYCLIC 控制（使用处理后的手动输入）
         if self.cyclic_enabled:
@@ -107,7 +107,7 @@ class HelicopterAssist:
             cyclic_x = self.inputs.input_cyclic_x
             cyclic_y = self.inputs.input_cyclic_y
 
-        return cyclic_x, cyclic_y, rudder, balanced_rudder
+        return cyclic_x, cyclic_y, rudder
 
     def loop(self, tel: DcsTelemetry):
         last_debug = time.time()
@@ -123,12 +123,11 @@ class HelicopterAssist:
             self.inputs.update(dt)
 
             state = tel.latest
-            cyclic_x, cyclic_y, rudder, balanced_rudder = self.compute_outputs(state)
+            cyclic_x, cyclic_y, rudder = self.compute_outputs(state)
 
             self.cyclic_x = cyclic_x
             self.cyclic_y = cyclic_y
             self.rudder = rudder
-            self.balanced_rudder = balanced_rudder
 
             if not self.cyclic_blocked and not self.rudder_blocked:
                 self.write_vjoy(cyclic_x, cyclic_y, rudder)
@@ -143,8 +142,8 @@ class HelicopterAssist:
         parts = []
         if self.cyclic_x is not None and self.cyclic_y is not None:
             parts.append(f"CyclicX={self.cyclic_x:+.2f} CyclicY={self.cyclic_y:+.2f}")
-        if self.rudder is not None and self.balanced_rudder is not None:
-            parts.append(f"Rudder={self.manual_rudder:+.2f} BalRudder={self.balanced_rudder:+.2f}")
+        if self.rudder is not None:
+            parts.append(f"Rudder={self.rudder:+.2f}")
         if self.rudder_helper.target_yaw is not None:
             parts.append(f"TargetYaw={self.rudder_helper.target_yaw:+.2f}")
         return " ".join(parts)

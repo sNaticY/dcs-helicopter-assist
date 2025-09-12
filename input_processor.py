@@ -17,7 +17,7 @@ class InputProcessor:
         expo_cyclic: float = 0.5,
         expo_rudder: float = 0.5,
         rate_up: float = 1.0,
-        rate_down: float = 2.0,
+        rate_down: float = 1.0,
         dither_threshold: float = 0.001,
         dither_amplitude: float = 0.001,
     ):
