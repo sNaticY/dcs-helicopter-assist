@@ -54,3 +54,9 @@ class MotionState:
         dx, dy, dz = x - self.x, y - self.y, z - self.z
         return world_to_body_velocity(dx, dy, dz, self.pitch, self.roll, self.yaw)
 
+    def debug_print(self):
+        return f" Vf={self.forward_v:+.2f} Vr={self.right_v:+.2f} |" \
+               f" Af={self.forward_acc:+.2f} Ar={self.right_acc:+.2f} |" \
+               f" Pitch={math.degrees(self.pitch):+.1f} Roll={math.degrees(self.roll):+.1f} Yaw={math.degrees(self.yaw):+.1f} |" \
+               f" PitchRate={math.degrees(self.pitch_rate):+.1f} RollRate={math.degrees(self.roll_rate):+.1f} YawRate={math.degrees(self.yaw_rate):+.1f} |" \
+               f" X={self.x:+.1f} Y={self.y:+.1f} Z={self.z:+.1f} |"

@@ -61,9 +61,3 @@ class DcsTelemetry(threading.Thread):
         for k in self._expected_keys:
             if k not in obj:
                 obj[k] = self.latest.get(k, 0.0)
-
-    def debug_print(self):
-        return (
-            f"Pitch={self.latest['Pitch']:.2f} Roll={self.latest['Roll']:.2f} Yaw={self.latest['Yaw']:.2f} | "
-            f"PitchRate={self.latest['PitchRate']:.2f} RollRate={self.latest['RollRate']:.2f} YawRate={self.latest['YawRate']:.2f}"
-        )

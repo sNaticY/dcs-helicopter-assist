@@ -93,9 +93,7 @@ class HelicopterAssist:
         # CYCLIC 控制（使用处理后的手动输入）
         if self.cyclic_enabled:
             cyclic_x, cyclic_y = self.cyclic_helper.update(
-                vx, vy, vz,
-                pitch, roll, yaw,
-                pitch_rate, roll_rate,
+                self.motion_state,
                 self.cyclic_blocked,
                 self.inputs.input_cyclic_x,
                 self.inputs.input_cyclic_y,
@@ -132,18 +130,21 @@ class HelicopterAssist:
 
             if now - last_debug > 1.0:
                 last_debug = now
-                print(f"{tel.debug_print()} | {self.cyclic_helper.debug_print()} | {self.debug_print()}")
+                print(f"{self.motion_state.debug_print()} | {self.debug_print()}")
 
             time.sleep(LOOP_DT)
 
     def debug_print(self) -> str:
         parts = []
-        if self.cyclic_x is not None and self.cyclic_y is not None:
-            parts.append(f"CyclicX={self.cyclic_x:+.2f} CyclicY={self.cyclic_y:+.2f}")
-        if self.rudder is not None:
-            parts.append(f"Rudder={self.rudder:+.2f}")
         if self.rudder_helper.target_yaw is not None:
             parts.append(f"TargetYaw={self.rudder_helper.target_yaw:+.2f}")
+        if abs(self.cyclic_helper.target_pitch) >= 0.001:
+            parts.append(f"TargetPitch={self.cyclic_helper.target_pitch:+.2f}")
+        # if self.cyclic_x is not None and self.cyclic_y is not None:
+        #     parts.append(f"CyclicX={self.cyclic_x:+.2f} CyclicY={self.cyclic_y:+.2f}")
+        # if self.rudder is not None:
+        #     parts.append(f"Rudder={self.rudder:+.2f}")
+        
         return " ".join(parts)
 
     def neutral_all(self):

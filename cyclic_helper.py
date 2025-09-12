@@ -14,9 +14,6 @@ class CyclicHelper:
         # 状态
         self.prev_up = 0.0
 
-        # 最近一次 update 的中間量
-        self.forward = 0.0
-        self.right = 0.0
         self.pitch_baseline = -0.105
         self.roll_baseline = -0.046
 
@@ -28,41 +25,39 @@ class CyclicHelper:
         self.ema_acc_up = EMA(config.EMA_ALPHA)
 
 
-    def update(self, Vx, Vy, Vz, Pitch, Roll, Yaw, PitchRate, RollRate, blocked = False, manual_cyclic_x=0.0, manual_cyclic_y=0.0, hovering=False):
+    def update(self, motion_state, blocked = False, manual_cyclic_x=0.0, manual_cyclic_y=0.0, hovering=False):
         
         # 计算当前速度和加速度
-        self.forward, self.right, _ = world_to_body_velocity(Vx, Vy, Vz, Pitch, Roll, Yaw)
-        acc_up = self.ema_acc_up.update((Vz - self.prev_up) / self.dt)
-        self.prev_up = Vz
+        self.prev_up = motion_state.up_v
         
         pre_error_x = 0.0
         pre_error_y = 0.0
         pre_error_acc_up = 0.0
 
         # 只有在懸停且穩定時才調整基準線
-        if hovering and abs(PitchRate) < 0.01 and abs(-Pitch -self.pitch_baseline) < 0.02:
-            self.pitch_baseline -= 0.0002 * self.forward
-        if hovering and abs(RollRate) < 0.01 and abs(Roll -self.roll_baseline) < 0.02:
-            self.roll_baseline -= 0.0002 * self.right
+        if hovering and abs(motion_state.pitch_rate) < 0.01 and abs(-motion_state.pitch - self.pitch_baseline) < 0.02:
+            self.pitch_baseline -= 0.0002 * motion_state.forward_v
+        if hovering and abs(motion_state.roll_rate) < 0.01 and abs(motion_state.roll - self.roll_baseline) < 0.02:
+            self.roll_baseline -= 0.0002 * motion_state.right_v
 
         # 記錄 pitch 歷史
         if not hovering and abs(manual_cyclic_y) > 0.02 and not hovering and abs(manual_cyclic_x) < 0.05:
-            self.pitch_history.append(Pitch)
+            self.pitch_history.append(motion_state.pitch)
             if len(self.pitch_history) > int(1.0 / self.dt):
                 self.pitch_history.pop(0)
 
         target_pitch = self.get_pitch_avg() if not hovering else 0.0
 
         if hovering:
-            pre_error_x = min(max(-0.05*(self.right) + self.roll_baseline, -0.2), 0.2)
-            pre_error_y = min(max(-0.05*(self.forward) + self.pitch_baseline, -0.15), 0.15)
+            pre_error_x = min(max(-0.05*(motion_state.right_v) + self.roll_baseline, -0.2), 0.2)
+            pre_error_y = min(max(-0.05*(motion_state.forward_v) + self.pitch_baseline, -0.15), 0.15)
         elif abs(manual_cyclic_y) < 0.05:
             pre_error_acc_up = 0 #sign(Pitch) * 2 * acc_up * min(max(Pitch - target_pitch, -0.2), 0.2)
 
        
 
-        self.cyclic_x_pid.update(-Roll + 1 * pre_error_x, -RollRate, manual=manual_cyclic_x)
-        self.cyclic_y_pid.update(Pitch - target_pitch + 1 * pre_error_y, PitchRate, preError=pre_error_acc_up, manual=manual_cyclic_y, forgetting_factor=0.0)
+        self.cyclic_x_pid.update(-motion_state.roll + 1 * pre_error_x, -motion_state.roll_rate, manual=manual_cyclic_x)
+        self.cyclic_y_pid.update(motion_state.pitch - target_pitch + 1 * pre_error_y, motion_state.pitch_rate, preError=pre_error_acc_up, manual=manual_cyclic_y, forgetting_factor=0.0)
 
         if blocked:
             self.pitch_history.clear()
@@ -81,7 +76,7 @@ class CyclicHelper:
         return x_result, y_result
 
     def debug_print(self):
-        return f"Vf={self.forward:+.2f} Vr={self.right:+.2f} | balanced_cyclic_x={self.cyclic_x_pid.balanced:+.2f} balanced_cyclic_y={self.cyclic_y_pid.balanced:+.2f} | pitch_baseline={self.pitch_baseline:+.3f} roll_baseline={self.roll_baseline:+.3f} | target_pitch={self.get_pitch_avg():+.3f}"
+        return f"target_pitch={self.get_pitch_avg():+.3f}"
 
     def get_pitch_avg(self):
         if self.pitch_history:
