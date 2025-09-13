@@ -1,6 +1,7 @@
 from numpy import sign
 import config
 from pid_calculator import PIDCalculator
+from pid_calculator_new import PIDCalculatorNew
 from utils import EMA, world_to_body_velocity
 
 
@@ -14,11 +15,17 @@ class CyclicHelper:
         # 状态
         self.prev_up = 0.0
 
+        self.target_pitch = 0.0
         self.pitch_baseline = -0.105
         self.roll_baseline = -0.046
 
         self.cyclic_x_pid = PIDCalculator(max_auth=self.max_auth, learning_rate=self.learning_rate)
         self.cyclic_y_pid = PIDCalculator(max_auth=self.max_auth, learning_rate=self.learning_rate * 10)
+
+        self.right_offset_pid = PIDCalculatorNew(Kp_base=0.2, Ki=0.01, Kd=0.0)
+        self.right_v_pid = PIDCalculatorNew(Kp_base=0.5, Ki=0.02, Kd=0.0)
+        self.roll_pid = PIDCalculatorNew(Kp_base=1.0, Ki=0.1, Kd=0.0)
+        self.roll_rate_pid = PIDCalculatorNew(Kp_base=1.0, Ki=0.05, Kd=0.02)
 
         # pitch 歷史紀錄
         self.pitch_history = []
@@ -46,7 +53,7 @@ class CyclicHelper:
             if len(self.pitch_history) > int(1.0 / self.dt):
                 self.pitch_history.pop(0)
 
-        target_pitch = self.get_pitch_avg() if not hovering else 0.0
+        self.target_pitch = self.get_pitch_avg() if not hovering else 0.0
 
         if hovering:
             pre_error_x = min(max(-0.05*(motion_state.right_v) + self.roll_baseline, -0.2), 0.2)
@@ -57,7 +64,7 @@ class CyclicHelper:
        
 
         self.cyclic_x_pid.update(-motion_state.roll + 1 * pre_error_x, -motion_state.roll_rate, manual=manual_cyclic_x)
-        self.cyclic_y_pid.update(motion_state.pitch - target_pitch + 1 * pre_error_y, motion_state.pitch_rate, preError=pre_error_acc_up, manual=manual_cyclic_y, forgetting_factor=0.0)
+        self.cyclic_y_pid.update(motion_state.pitch - self.target_pitch + 1 * pre_error_y, motion_state.pitch_rate, preError=pre_error_acc_up, manual=manual_cyclic_y, forgetting_factor=0.0)
 
         if blocked:
             self.pitch_history.clear()
