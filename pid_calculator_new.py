@@ -52,7 +52,7 @@ class PIDCalculatorNew:
         self.auto = Kp * error + self.Ki * self.error_integral + self.Kd * self.rate
         self.auto = max(min(self.auto, self.max_auth), -self.max_auth)
 
-    def manual_override_integral(self, error, rate, delta_time, manual_input):
+    def manual_override_integral(self, error, rate, delta_time, manual_input, prev_error):
         # 自适应比例增益
         Kp = self.Kp_base + self.adaptive_factor * abs(error)
 
@@ -68,6 +68,10 @@ class PIDCalculatorNew:
         self.error_integral = ((manual_input - Kp * error - self.Kd * self.rate) / self.Ki)
         print(f"Manual override integral: {self.error_integral:.3f}")
 
+    def update_ki(self, new_ki):
+        self.error_integral = self.Ki / new_ki * self.error_integral
+        self.Ki = new_ki
+        
     def reset(self):
         self.auto = 0.0
         self.balanced = 0.0
