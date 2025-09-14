@@ -55,7 +55,7 @@ class MotionState:
         self.prev_z = 0.0
 
     def update(self, Vx, Vy, Vz, Pitch, Roll, Yaw, Ax, Ay, Az, PitchRate, RollRate, YawRate, x, y, z):
-        
+
         # 保存上一帧数据
         self.prev_forward_v, self.prev_right_v, self.prev_up_v = self.forward_v, self.right_v, self.up_v
         self.prev_forward_acc, self.prev_right_acc, self.prev_up_acc = self.forward_acc, self.right_acc, self.up_acc
@@ -87,6 +87,6 @@ class MotionState:
     def debug_print(self):
         return f" Vf={self.forward_v:+.2f} Vr={self.right_v:+.2f} |" \
                f" Af={self.forward_acc:+.2f} Ar={self.right_acc:+.2f} |" \
-               f" Pitch={math.degrees(self.pitch):+.1f} Roll={math.degrees(self.roll):+.1f} Yaw={math.degrees(self.yaw):+.1f} |" \
-               f" PitchRate={math.degrees(self.pitch_rate):+.1f} RollRate={math.degrees(self.roll_rate):+.1f} YawRate={math.degrees(self.yaw_rate):+.1f} |" \
+               f" Pitch={self.pitch:+.2f} Roll={self.roll:+.2f} Yaw={self.yaw:+.2f} |" \
+               f" PitchRate={self.pitch_rate:+.2f} RollRate={self.roll_rate:+.2f} YawRate={self.yaw_rate:+.2f} |" \
                f" X={self.x:+.1f} Y={self.y:+.1f} Z={self.z:+.1f} |"

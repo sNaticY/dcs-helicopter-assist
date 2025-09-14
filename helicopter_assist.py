@@ -92,6 +92,9 @@ class HelicopterAssist:
 
         # CYCLIC 控制（使用处理后的手动输入）
         if self.cyclic_enabled:
+            if self.cyclic_hovering and (abs(self.inputs.manual_cyclic_x) >= 0.02 or abs(self.inputs.manual_cyclic_y) >= 0.02):
+                self.cyclic_hovering = False
+                self.cyclic_mode = 1
             cyclic_x, cyclic_y = self.cyclic_helper.update(
                 self.motion_state,
                 self.cyclic_blocked,

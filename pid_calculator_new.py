@@ -11,6 +11,8 @@ class PIDCalculatorNew:
         adaptive_factor=0.003,
         max_auth=0.35,
         integral_max=5.0,
+        skip=1,
+        stable_threshold=0.02,
     ):
         # 参数
         self.Kp_base = Kp_base
@@ -19,12 +21,15 @@ class PIDCalculatorNew:
         self.adaptive_factor = adaptive_factor
         self.max_auth = max_auth
         self.integral_max = integral_max
+        self.skip = skip
+        self.stable_threshold = stable_threshold
 
         # 状态
         self.auto = 0.0
         self.error_integral = 0.0
         self.prev_error = 0.0
         self.rate = 0.0
+        self._skip = 0
 
         self.ema_rate = EMA(config.EMA_ALPHA)
 
@@ -51,10 +56,13 @@ class PIDCalculatorNew:
         # PID 控制
         self.auto = Kp * error + self.Ki * self.error_integral + self.Kd * self.rate
         self.auto = max(min(self.auto, self.max_auth), -self.max_auth)
+        self._skip = 0
 
-    def manual_override_integral(self, error, rate, delta_time, manual_input, prev_error):
+    def manual_override(self, error, rate, delta_time, manual_input, prev_error, skip):
         # 自适应比例增益
         Kp = self.Kp_base + self.adaptive_factor * abs(error)
+        self.prev_error = prev_error
+        self._skip = skip
 
         # 误差微分
         if rate == None:
@@ -71,6 +79,15 @@ class PIDCalculatorNew:
     def update_ki(self, new_ki):
         self.error_integral = self.Ki / new_ki * self.error_integral
         self.Ki = new_ki
+
+    def update_skip(self):
+        self._skip += 1
+
+    def is_available(self):
+        return self._skip >= self.skip
+    
+    def is_stable(self):
+        return self.prev_error <= self.stable_threshold
         
     def reset(self):
         self.auto = 0.0
