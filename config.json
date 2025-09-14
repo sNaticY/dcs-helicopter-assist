@@ -1,0 +1,9 @@
+{
+  "UDP_HOST": "127.0.0.1",
+  "UDP_PORT": 28777,
+  "VJOY_DEVICE_ID": 3,
+  "TOGGLE_RUDDER_HOTKEY": "f8",
+  "TOGGLE_CYCLIC_HOTKEY": "f9",
+  "TOGGLE_PAUSE_HOTKEY": "left ctrl",
+  "EMA_ALPHA": 0.25
+}
