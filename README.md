@@ -94,7 +94,7 @@ This project includes Export/Export.lua which sends telemetry to the app via UDP
 2) Backup your existing Export.lua if present.
 
 3) Copy project file:
-- From: c:\Games\HoverAssist\Export\Export.lua
+- From: c:\Games\HelicopterAssist\Export\Export.lua
 - To:   %SavedGames%\DCS...\Scripts\Export.lua
 
 Export.lua sends JSON lines at 50 Hz to 127.0.0.1:28777 by default. If you run the app on another machine, change the target in Export.lua and config.json, and allow UDP in the firewall.
@@ -113,7 +113,7 @@ The Python side parses these in dcs_telemetry.DcsTelemetry.
 ## 5) Running and usage
 
 Running the EXE:
-- Double-click the HoverAssist.exe (place config.json next to it).
+- Double-click the HelicopterAssist.exe (place config.json next to it).
 - Start a DCS mission; Export.lua begins sending telemetry automatically.
 
 Running from source:
@@ -157,7 +157,7 @@ Manual input:
 ## 7) Config (config.json)
 
 Config is a plain JSON file at the project root:
-- c:\Games\HoverAssist\config.json
+- c:\Games\HelicopterAssist\config.json
 
 Default content:
 ```
