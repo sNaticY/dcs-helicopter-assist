@@ -141,7 +141,7 @@ class HelicopterAssist:
         parts = []
         if self.rudder_helper.target_yaw is not None:
             parts.append(f"TargetYaw={self.rudder_helper.target_yaw:+.2f}")
-        if abs(self.cyclic_helper.target_pitch) >= 0.001:
+        if self.cyclic_helper.target_pitch is not None:
             parts.append(f"TargetPitch={self.cyclic_helper.target_pitch:+.2f}")
         # if self.cyclic_x is not None and self.cyclic_y is not None:
         #     parts.append(f"CyclicX={self.cyclic_x:+.2f} CyclicY={self.cyclic_y:+.2f}")

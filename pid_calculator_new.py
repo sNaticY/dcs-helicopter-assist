@@ -77,9 +77,9 @@ class PIDCalculatorNew:
         print(f"Manual override integral: {self.error_integral:.3f}")
 
     def update_ki(self, new_ki):
-        if new_ki == 0:
+        if new_ki == 0 or self.error_integral == 0:
             self.error_integral = 0.0
-            self.Ki = 0.0
+            self.Ki = new_ki
             return
         self.error_integral = self.Ki / new_ki * self.error_integral
         self.Ki = new_ki

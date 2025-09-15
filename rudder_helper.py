@@ -42,7 +42,7 @@ class RudderHelper:
             )
             self.yaw_rate_pid.update_ki(self.yaw_rate_ki)
 
-        if not manual_active and (abs(motion_state.yaw_rate) < 0.05 or self.prev_manual_rudder * motion_state.yaw_rate > 0) and self.target_yaw is None:
+        if not manual_active and (abs(motion_state.yaw_rate) < 0.05 or self.prev_manual_rudder * motion_state.yaw_rate >= 0) and self.target_yaw is None:
             self.target_yaw = motion_state.yaw
             # 重置外环，清掉历史积分/导数，避免旧命令残留
             self.yaw_pid.manual_override(
