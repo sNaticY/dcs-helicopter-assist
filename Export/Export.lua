@@ -1,6 +1,7 @@
 -- === DCS -> Python Telemetry Export (UDP) ===
 -- 坐标系: 世界坐标 (米) 轴向 x=东, y=海拔, z=北；机体坐标: LoGetVectorVelocity/AngularVelocity 返回机体系
-
+package.path   = package.path .. ";" .. lfs.currentdir() .. "/LuaSocket/?.lua"
+package.cpath  = package.cpath .. ";" .. lfs.currentdir() .. "/LuaSocket/?.dll"
 local socket   = require("socket")
 
 -- 配置
@@ -26,11 +27,11 @@ end
 
 -- 采样并构造一行 JSON（末尾带换行）
 local function get_state()
-    local vel                          = LoGetVectorVelocity() -- m/s, 机体坐标
+    local vel                          = LoGetVectorVelocity()    -- m/s, 机体坐标
     local accG                         = LoGetAccelerationUnits() -- G,   机体坐标
-    local Pitch, Roll, Yaw             = LoGetADIPitchBankYaw() -- rad
-    local angRate                      = LoGetAngularVelocity() -- rad/s, 机体坐标
-    local sd                           = LoGetSelfData() -- 世界坐标（米）
+    local Pitch, Roll, Yaw             = LoGetADIPitchBankYaw()   -- rad
+    local angRate                      = LoGetAngularVelocity()   -- rad/s, 机体坐标
+    local sd                           = LoGetSelfData()          -- 世界坐标（米）
 
     local Vx, Vy, Vz                   = 0.0, 0.0, 0.0
     local Ax, Ay, Az                   = 0.0, 0.0, 0.0
