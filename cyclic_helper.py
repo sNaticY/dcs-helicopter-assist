@@ -19,13 +19,13 @@ class CyclicHelper:
 
         self.right_offset_pid = PIDCalculatorNew(Kp_base=0.5, Ki=0.3, Kd=0.01, integral_max=40, skip=2, max_auth=20.0)
         self.right_v_pid = PIDCalculatorNew(Kp_base=0.02, Ki=0.0001, Kd=0.0, integral_max=0.68, skip=3, max_auth=0.34)
-        self.roll_pid = PIDCalculatorNew(Kp_base=3.0, Ki=0.0, Kd=0.0, integral_max=10, skip=4, max_auth=5.0)
-        self.roll_rate_pid = PIDCalculatorNew(Kp_base=0.2, Ki=0.0001, Kd=0.05, integral_max=2)
+        self.roll_pid = PIDCalculatorNew(Kp_base=1.9, Ki=0.0, Kd=0.0, integral_max=0.1, skip=4, max_auth=0.5)
+        self.roll_rate_pid = PIDCalculatorNew(Kp_base=0.05, Ki=0.0001, Kd=0.02, integral_max=0.1)
 
         self.forward_offset_pid = PIDCalculatorNew(Kp_base=0.5, Ki=0.3, Kd=0.01, integral_max=40, skip=2, max_auth=8.0)
         self.forward_v_pid = PIDCalculatorNew(Kp_base=0.05, Ki=0.0001, Kd=0.0, integral_max=0.68, skip=3, max_auth=0.34)
-        self.pitch_pid = PIDCalculatorNew(Kp_base=1.0, Ki=0.0, Kd=0.0, integral_max=1, skip=4, max_auth=0.5)
-        self.pitch_rate_pid = PIDCalculatorNew(Kp_base=0.25, Ki=0.0001, Kd=0.05, integral_max=20, max_auth=0.5)
+        self.pitch_pid = PIDCalculatorNew(Kp_base=1.0, Ki=0.0, Kd=0.0, integral_max=10, skip=4, max_auth=1)
+        self.pitch_rate_pid = PIDCalculatorNew(Kp_base=0.18, Ki=0.0001, Kd=0.04, integral_max=20, max_auth=0.5)
         
         self.ema_cyclic_x = EMA(EMA_ALPHA)
         self.ema_cyclic_y = EMA(EMA_ALPHA)
@@ -45,23 +45,31 @@ class CyclicHelper:
             self.prev_manual_cyclic_y = manual_cyclic_y
             return None, None
         
-        # 手动 -> 自动 切换瞬间，避免回弹
-        if self.prev_manual_active and not manual_active:
-            self.pitch_pid.reset()
-            self.pitch_rate_pid.update_ki(self.pitch_rate_ki)
-
         if hovering:
             self.roll_pid.update_ki(0.0)
             self.pitch_pid.update_ki(0.0)
             self.target_pitch = 0.0
         else:
-            self.roll_pid.update_ki(0.24)
-            self.pitch_pid.update_ki(0.5)
+            self.roll_pid.update_ki(0.05)
+            self.pitch_pid.update_ki(self.pitch_rate_ki)
             self.forward_v_pid.reset()
             self.forward_offset_pid.reset()
             self.right_v_pid.reset()
             self.right_offset_pid.reset()
             self.target_pitch = None
+        
+        # 手动 -> 自动 切换瞬间，避免回弹
+        if self.prev_manual_active and not manual_active:
+            self.pitch_pid.reset()
+            self.pitch_rate_pid.manual_override(
+                error=motion_state.pitch_rate,
+                rate=None,
+                delta_time=self.dt,
+                manual_input=self.ema_cyclic_y.y,
+                prev_error=motion_state.prev_pitch_rate,
+                skip=self.pitch_rate_pid.skip
+            )
+            self.pitch_rate_pid.update_ki(self.pitch_rate_ki)
 
         forward_offset, right_offset, up_offset = motion_state.get_position_delta(self.last_pos_x, self.last_pos_y, self.last_pos_z)
         if abs(forward_offset) > 1:
@@ -88,9 +96,12 @@ class CyclicHelper:
                 if self.target_pitch is not None:
                     self.pitch_pid.update(error=motion_state.pitch+self.forward_v_pid.auto-self.target_pitch, rate=None, delta_time=self.dt * self.pitch_pid.skip)
                 self.forward_v_pid.update_skip()
-            self.roll_rate_pid.update(error=-motion_state.roll_rate + self.roll_pid.auto, rate=None, delta_time=self.dt)
-            sign_correction = sign(motion_state.pitch_rate + self.pitch_pid.auto)
-            self.pitch_rate_pid.update(error=sign_correction * math.sqrt(abs(motion_state.pitch_rate + self.pitch_pid.auto)), rate=None, delta_time=self.dt)
+            error_roll_rate = -motion_state.roll_rate + self.roll_pid.auto
+            sign_correction = sign(error_roll_rate)
+            self.roll_rate_pid.update(error=sign_correction * math.sqrt(abs(error_roll_rate)), rate=None, delta_time=self.dt)
+            error_pitch_rate = motion_state.pitch_rate + self.pitch_pid.auto
+            sign_correction = sign(error_pitch_rate)
+            self.pitch_rate_pid.update(error=sign_correction * math.sqrt(abs(error_pitch_rate)), rate=None, delta_time=self.dt)
             self.roll_pid.update_skip()
             self.pitch_pid.update_skip()
 
@@ -117,7 +128,7 @@ class CyclicHelper:
         self.forward_offset_pid.reset()
         self.forward_v_pid.reset()
         self.pitch_pid.reset()
-        self.pitch_rate_pid.reset()
+        # self.pitch_rate_pid.reset()
         self.last_pos_x = 0.0
         self.last_pos_y = 0.0
         self.last_pos_z = 0.0
