@@ -19,13 +19,13 @@ class CyclicHelper:
 
         self.right_offset_pid = PIDCalculatorNew(Kp_base=0.5, Ki=0.3, Kd=0.01, integral_max=40, skip=2, max_auth=20.0)
         self.right_v_pid = PIDCalculatorNew(Kp_base=0.02, Ki=0.0001, Kd=0.0, integral_max=0.68, skip=3, max_auth=0.34)
-        self.roll_pid = PIDCalculatorNew(Kp_base=1.9, Ki=0.0, Kd=0.0, integral_max=0.1, skip=4, max_auth=0.5)
-        self.roll_rate_pid = PIDCalculatorNew(Kp_base=0.05, Ki=0.0001, Kd=0.02, integral_max=0.1)
+        self.roll_pid = PIDCalculatorNew(Kp_base=1.9, Ki=0.0, Kd=0.001, integral_max=0.1, integral_leak=0.02, skip=4, max_auth=0.5)
+        self.roll_rate_pid = PIDCalculatorNew(Kp_base=0.05, Ki=0.001, Kd=0.02, integral_max=20, integral_leak=0.001)
 
         self.forward_offset_pid = PIDCalculatorNew(Kp_base=0.5, Ki=0.3, Kd=0.01, integral_max=40, skip=2, max_auth=8.0)
         self.forward_v_pid = PIDCalculatorNew(Kp_base=0.05, Ki=0.0001, Kd=0.0, integral_max=0.68, skip=3, max_auth=0.34)
-        self.pitch_pid = PIDCalculatorNew(Kp_base=1.0, Ki=0.0, Kd=0.0, integral_max=10, skip=4, max_auth=1)
-        self.pitch_rate_pid = PIDCalculatorNew(Kp_base=0.18, Ki=0.0001, Kd=0.04, integral_max=20, max_auth=0.5)
+        self.pitch_pid = PIDCalculatorNew(Kp_base=1.0, Ki=0.0, Kd=0.001, integral_max=0.1, integral_leak=0.02, skip=4, max_auth=1)
+        self.pitch_rate_pid = PIDCalculatorNew(Kp_base=0.18, Ki=0.001, Kd=0.04, integral_max=20, integral_leak=0.001, max_auth=0.5)
         
         self.ema_cyclic_x = EMA(EMA_ALPHA)
         self.ema_cyclic_y = EMA(EMA_ALPHA)
@@ -41,13 +41,9 @@ class CyclicHelper:
         manual_active = abs(manual_cyclic_x) >= 0.05 or abs(manual_cyclic_y) >= 0.05
 
         if not self.prev_hovering_active and hovering:
-            self.roll_pid.update_ki(0.0)
-            self.pitch_pid.update_ki(0.0)
             self.pitch_rate_pid.reset()
             self.target_pitch = 0.0
         elif self.prev_hovering_active and not hovering:
-            self.roll_pid.update_ki(0.05)
-            self.pitch_pid.update_ki(self.pitch_rate_ki)
             self.forward_v_pid.reset()
             self.forward_offset_pid.reset()
             self.right_v_pid.reset()

@@ -11,6 +11,7 @@ class PIDCalculatorNew:
         adaptive_factor=0.003,
         max_auth=0.35,
         integral_max=5.0,
+        integral_leak=0.0,
         skip=1,
         stable_threshold=0.02,
     ):
@@ -21,6 +22,7 @@ class PIDCalculatorNew:
         self.adaptive_factor = adaptive_factor
         self.max_auth = max_auth
         self.integral_max = integral_max
+        self.integral_leak = integral_leak
         self.skip = skip
         self.stable_threshold = stable_threshold
 
@@ -47,7 +49,7 @@ class PIDCalculatorNew:
             self.prev_error = error
 
         # 积分泄漏
-        #self.error_integral -= 0.01 * max(abs(self.rate), 0.1) * self.error_integral
+        self.error_integral -= self.integral_leak * self.error_integral
 
         # 积分项
         self.error_integral += error * delta_time
