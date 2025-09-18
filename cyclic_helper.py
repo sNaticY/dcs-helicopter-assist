@@ -34,28 +34,26 @@ class CyclicHelper:
 
         self.prev_manual_active = False
         self.prev_manual_cyclic_y = 0.0
+        self.prev_hovering_active = False
 
 
-    def update(self, motion_state, blocked = False, manual_cyclic_x=0.0, manual_cyclic_y=0.0, hovering=False):
-        manual_active = abs(manual_cyclic_x) >= 0.02 or abs(manual_cyclic_y) >= 0.02
+    def update(self, motion_state, manual_cyclic_x=0.0, manual_cyclic_y=0.0, hovering=False):
+        manual_active = abs(manual_cyclic_x) >= 0.05 or abs(manual_cyclic_y) >= 0.05
 
-        if blocked:
-            self.target_pitch = None
-            self.prev_manual_active = manual_active
-            self.prev_manual_cyclic_y = manual_cyclic_y
-            return None, None
-        
-        if hovering:
+        if not self.prev_hovering_active and hovering:
             self.roll_pid.update_ki(0.0)
             self.pitch_pid.update_ki(0.0)
+            self.pitch_rate_pid.reset()
             self.target_pitch = 0.0
-        else:
+        elif self.prev_hovering_active and not hovering:
             self.roll_pid.update_ki(0.05)
             self.pitch_pid.update_ki(self.pitch_rate_ki)
             self.forward_v_pid.reset()
             self.forward_offset_pid.reset()
             self.right_v_pid.reset()
             self.right_offset_pid.reset()
+
+        if not hovering:
             self.target_pitch = None
         
         # 手动 -> 自动 切换瞬间，避免回弹
@@ -116,6 +114,7 @@ class CyclicHelper:
             y_result = self.ema_cyclic_y.y + manual_cyclic_y
 
         self.prev_manual_active = manual_active
+        self.prev_hovering_active = hovering
 
         return x_result, y_result
         

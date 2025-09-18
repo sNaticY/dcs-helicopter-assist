@@ -31,8 +31,8 @@ class HelicopterAssist:
         self.rudder_enabled = False
 
         # 阻塞状态（例如键盘按下时暂停输出）
-        self.cyclic_blocked = False
-        self.rudder_blocked = False
+        self.input_blocked = False
+        self.helper_blocked = False
 
         # 控制辅助
         self.cyclic_helper = CyclicHelper()
@@ -84,20 +84,22 @@ class HelicopterAssist:
             pos_x, pos_y, pos_z,
         )
 
+        if self.input_blocked:
+            self.inputs.set_manual(0.0, 0.0, 0.0)
+
         # RUDDER 控制（使用处理后的手动输入）
-        if self.rudder_enabled:
-            rudder = self.rudder_helper.update(self.motion_state, self.rudder_blocked, self.inputs.input_rudder)
+        if self.rudder_enabled and not self.helper_blocked:
+            rudder = self.rudder_helper.update(self.motion_state, self.inputs.input_rudder)
         else:
             rudder = self.inputs.input_rudder
 
         # CYCLIC 控制（使用处理后的手动输入）
-        if self.cyclic_enabled:
+        if self.cyclic_enabled and not self.helper_blocked:
             if self.cyclic_hovering and (abs(self.inputs.manual_cyclic_x) >= 0.02 or abs(self.inputs.manual_cyclic_y) >= 0.02):
                 self.cyclic_hovering = False
                 self.cyclic_mode = 1
             cyclic_x, cyclic_y = self.cyclic_helper.update(
                 self.motion_state,
-                self.cyclic_blocked,
                 self.inputs.input_cyclic_x,
                 self.inputs.input_cyclic_y,
                 self.cyclic_hovering,
@@ -128,7 +130,7 @@ class HelicopterAssist:
             self.cyclic_y = cyclic_y
             self.rudder = rudder
 
-            if not self.cyclic_blocked and not self.rudder_blocked:
+            if not self.helper_blocked:
                 self.write_vjoy(cyclic_x, cyclic_y, rudder)
 
             if now - last_debug > 1.0:
@@ -180,16 +182,23 @@ def main():
     jm.start()
 
     def on_keyboard_event(event):
-        if event.event_type == "down":
-            assist.cyclic_blocked = True
-            assist.rudder_blocked = True
-        elif event.event_type == "up":
-            assist.cyclic_blocked = False
-            assist.rudder_blocked = False
-            assist.rudder_helper.reset()
-            assist.cyclic_helper.reset()
+        if event.name == 'ctrl' and event.scan_code == 29:
+            if event.event_type == "down":
+                assist.input_blocked = True
+                assist.helper_blocked = True
+            elif event.event_type == "up":
+                assist.input_blocked = False
+                assist.helper_blocked = False
+                assist.rudder_helper.reset()
+                assist.cyclic_helper.reset()
+        else:
+            if event.event_type == "down":
+                assist.input_blocked = True
+            elif event.event_type == "up":
+                assist.input_blocked = False
 
     keyboard.hook_key(TOGGLE_PAUSE_HOTKEY, on_keyboard_event, suppress=False)
+    keyboard.hook_key('shift', on_keyboard_event, suppress=False)
     keyboard.add_hotkey(TOGGLE_CYCLIC_HOTKEY, lambda: toggle_cyclic(assist))
     keyboard.add_hotkey(TOGGLE_RUDDER_HOTKEY, lambda: toggle_rudder(assist))
 

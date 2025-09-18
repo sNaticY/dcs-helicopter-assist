@@ -46,9 +46,7 @@ class JoystickMonitor(threading.Thread):
                     if e.code == "ABS_RX":
                         self.rx = e.state / 32767.0
 
-            if not self.assist.cyclic_blocked:
+            if not self.assist.input_blocked and not self.assist.helper_blocked:
                 self.assist.manual_cyclic_x = self.lx
-            if not self.assist.cyclic_blocked:
                 self.assist.manual_cyclic_y = self.ly
-            if not self.assist.rudder_blocked:
                 self.assist.manual_rudder = self.rx

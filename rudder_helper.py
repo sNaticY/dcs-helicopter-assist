@@ -8,12 +8,12 @@ class RudderHelper:
         # 参数
         self.adaptive_factor = 0.03
         self.dt = 0.02
-        self.yaw_rate_ki = 4.0
+        self.yaw_rate_ki = 0.7
 
         # 状态
         self.target_yaw = None
-        self.yaw_pid = PIDCalculatorNew(Kp_base=1.2, Ki=0.1, Kd=0, max_auth=0.5, integral_max=0.5, skip=5)
-        self.yaw_rate_pid = PIDCalculatorNew(Kp_base=2.5, Ki=self.yaw_rate_ki, Kd=0.005, adaptive_factor=0.06, max_auth=0.7, integral_max=3.0)
+        self.yaw_pid = PIDCalculatorNew(Kp_base=1, Ki=0.04, Kd=0, max_auth=0.5, integral_max=0.05, skip=5)
+        self.yaw_rate_pid = PIDCalculatorNew(Kp_base=0.7, Ki=self.yaw_rate_ki, Kd=0.01, adaptive_factor=0.06, max_auth=0.7, integral_max=6)
         
         self.prev_manual_active = False
         self.prev_manual_rudder = 0.0
@@ -21,17 +21,12 @@ class RudderHelper:
     # -------------------------------
     # 控制循环调用
     # -------------------------------
-    def update(self, motion_state, blocked, rudder_manual=0.0):
+    def update(self, motion_state, rudder_manual=0.0):
         manual_active = abs(rudder_manual) >= 0.02
-
-        if blocked:
-            self.target_yaw = None
-            self.prev_manual_active = manual_active
-            self.prev_manual_rudder = rudder_manual
-            return None, None
 
         # 手动 -> 自动 切换瞬间，避免回弹
         if not manual_active and self.prev_manual_active:
+            self.yaw_pid.reset()
             self.yaw_rate_pid.manual_override(
                 error=motion_state.yaw_rate,
                 rate=None,
@@ -44,16 +39,16 @@ class RudderHelper:
 
         if not manual_active and (abs(motion_state.yaw_rate) < 0.05 or self.prev_manual_rudder * motion_state.yaw_rate >= 0) and self.target_yaw is None:
             self.target_yaw = motion_state.yaw
-            # 重置外环，清掉历史积分/导数，避免旧命令残留
-            self.yaw_pid.manual_override(
-                error=0.0, 
-                rate=motion_state.yaw_rate,
-                delta_time=self.dt * self.yaw_pid.skip,
-                manual_input=0.0,
-                prev_error=motion_state.yaw - (motion_state.yaw - motion_state.prev_yaw) * self.yaw_pid.skip,
-                skip=self.yaw_pid.skip
-            )
-            self.yaw_rate_pid.update_ki(self.yaw_rate_ki / 100)
+            # self.yaw_pid.manual_override(
+            #     error=0.0, 
+            #     rate=motion_state.yaw_rate,
+            #     delta_time=self.dt * self.yaw_pid.skip,
+            #     manual_input=0.0,
+            #     prev_error=motion_state.yaw - (motion_state.yaw - motion_state.prev_yaw) * self.yaw_pid.skip,
+            #     skip=self.yaw_pid.skip
+            # )
+            self.yaw_pid.reset()
+            # self.yaw_rate_pid.update_ki(0)
             
 
         # 手动时不维持目标，自动时维持/建立目标
@@ -78,7 +73,8 @@ class RudderHelper:
                 yaw_cmd = 0.0
 
             # 内环
-            self.yaw_rate_pid.update(error=(motion_state.yaw_rate + yaw_cmd), rate=None, delta_time=self.dt)
+            sign_correction = sign(motion_state.yaw_rate + yaw_cmd)
+            self.yaw_rate_pid.update(error=sign_correction * (abs(motion_state.yaw_rate + yaw_cmd) ** 0.75), rate=None, delta_time=self.dt)
             self.yaw_pid.update_skip()
 
         # 合成输出：手动优先
