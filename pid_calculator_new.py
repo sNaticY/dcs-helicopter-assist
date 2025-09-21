@@ -87,6 +87,9 @@ class PIDCalculatorNew:
         self.error_integral = self.Ki / new_ki * self.error_integral
         self.Ki = new_ki
 
+    def update_max_integral(self, new_max_integral):
+        self.integral_max = new_max_integral
+
     def update_skip(self):
         self._skip += 1
 
