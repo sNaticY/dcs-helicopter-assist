@@ -15,8 +15,8 @@ class RudderHelper:
         # 状态
         self.target_yaw = None
         self.target_yaw_rate = 0.0
-        self.yaw_pid = PIDCalculatorNew(Kp_base=1, Ki=0.04, Kd=0, max_auth=0.5, integral_max=0.05, skip=5)
-        self.yaw_rate_pid = PIDCalculatorNew(Kp_base=1.4, Ki=self.yaw_rate_ki, Kd=0.35, adaptive_factor=0.06, max_auth=0.99, integral_max=1/self.yaw_rate_ki)
+        self.yaw_pid = PIDCalculatorNew(Kp_base=1, Ki=0.04, Kd=0, max_auth=0.5, integral_max=0.002, skip=5)
+        self.yaw_rate_pid = PIDCalculatorNew(Kp_base=1.4, Ki=self.yaw_rate_ki, Kd=0.35, adaptive_factor=0.06, max_auth=0.99, integral_max=0.9)
         
         self.prev_manual_active = False
         self.prev_manual_rudder = 0.0

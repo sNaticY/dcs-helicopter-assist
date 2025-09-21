@@ -53,7 +53,8 @@ class PIDCalculatorNew:
 
         # 积分项
         self.error_integral += error * delta_time
-        self.error_integral = max(min(self.error_integral, self.integral_max), -self.integral_max)
+        integral_max = self.integral_max / self.Ki if self.Ki != 0 else 0
+        self.error_integral = max(min(self.error_integral, integral_max), -integral_max)
 
         # PID 控制
         self.auto = Kp * error + self.Ki * self.error_integral + self.Kd * self.rate
